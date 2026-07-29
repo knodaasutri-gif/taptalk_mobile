@@ -1,652 +1,4 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#4f46e5">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>TapTalk - 絵カード＆文字起こしコミュニケーション</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --bg-main: #f8fafc;
-            --card-bg: #ffffff;
-            --text-dark: #0f172a;
-            --text-muted: #64748b;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-purple: #8b5cf6;
-            --accent-orange: #f59e0b;
-            --border-color: #cbd5e1;
-            --safe-top: env(safe-area-inset-top, 0px);
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-dark);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: calc(10px + var(--safe-top)) 12px calc(80px + var(--safe-bottom)) 12px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        header {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 14px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            margin-bottom: 12px;
-            border: 2px solid var(--border-color);
-            position: sticky;
-            top: 10px;
-            z-index: 20;
-        }
-
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .app-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .mode-badge {
-            background-color: #e0e7ff;
-            color: var(--primary);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 800;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .mode-badge.active {
-            background-color: var(--primary);
-            color: white;
-            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-        }
-
-        .speech-display-box {
-            background-color: #f8fafc;
-            border: 3px solid var(--primary);
-            border-radius: 16px;
-            padding: 14px;
-            text-align: center;
-            min-height: 85px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            transition: all 0.2s ease;
-        }
-
-        .speech-display-box.active {
-            background-color: #eef2ff;
-            border-color: var(--accent-green);
-            box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
-        }
-
-        .speech-display-box.listening {
-            border-color: var(--accent-purple);
-            background-color: #f3e8ff;
-            box-shadow: 0 0 14px rgba(139, 92, 246, 0.3);
-        }
-
-        .speech-text {
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            line-height: 1.35;
-            word-break: break-word;
-        }
-
-        .speech-placeholder {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-
-        .replay-btn {
-            position: absolute;
-            right: 8px;
-            bottom: 8px;
-            background: var(--accent-green);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 10px;
-            font-weight: 800;
-            font-size: 0.78rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
-        }
-
-        .tabs-wrapper {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .tabs-wrapper::-webkit-scrollbar {
-            display: none;
-        }
-
-        .tab-btn {
-            background-color: #ffffff;
-            border: 2px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 25px;
-            font-size: 0.88rem;
-            font-weight: 800;
-            color: var(--text-muted);
-            white-space: nowrap;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .tab-btn.active {
-            background-color: var(--primary);
-            color: #ffffff;
-            border-color: var(--primary);
-            box-shadow: 0 3px 8px rgba(79, 70, 229, 0.3);
-        }
-
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            flex-grow: 1;
-            margin-bottom: 15px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border: 2.5px solid var(--border-color);
-            border-radius: 18px;
-            padding: 14px 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.1s ease, border-color 0.15s ease, background-color 0.15s ease;
-            min-height: 120px;
-            position: relative;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.03);
-        }
-
-        .card:active, .card.speaking {
-            transform: scale(0.95);
-            border-color: var(--accent-green);
-            background-color: #f0fdf4;
-        }
-
-        .card-icon {
-            font-size: 2.5rem;
-            margin-bottom: 6px;
-            line-height: 1;
-        }
-
-        .card-text {
-            font-size: 0.95rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            line-height: 1.3;
-        }
-
-        .delete-card-btn {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            background: var(--accent-red);
-            color: white;
-            border: 2px solid white;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        body.manage-mode .delete-card-btn {
-            display: flex;
-        }
-
-        .calendar-box {
-            background: white;
-            border-radius: 18px;
-            padding: 16px;
-            border: 2px solid var(--accent-purple);
-            margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
-        }
-
-        .calendar-title {
-            font-weight: 800;
-            font-size: 1rem;
-            margin-bottom: 10px;
-            color: var(--accent-purple);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .form-row {
-            margin-bottom: 10px;
-        }
-
-        .form-row label {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 800;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .form-row input, .form-row select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-weight: 700;
-            background: #f8fafc;
-            outline: none;
-        }
-
-        .quick-date-btns {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-        }
-
-        .quick-btn {
-            flex: 1;
-            padding: 6px;
-            background: #e2e8f0;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.78rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            cursor: pointer;
-        }
-
-        .stt-log-box {
-            background: white;
-            border-radius: 18px;
-            padding: 14px;
-            border: 2px solid var(--accent-purple);
-            margin-bottom: 15px;
-        }
-
-        .log-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 220px;
-            overflow-y: auto;
-            margin-top: 8px;
-        }
-
-        .log-item {
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 0.88rem;
-            font-weight: 700;
-            line-height: 1.35;
-        }
-
-        .log-item.me {
-            background-color: #e0e7ff;
-            color: #1e1b4b;
-            align-self: flex-start;
-            border-left: 4px solid var(--primary);
-        }
-
-        .log-item.other {
-            background-color: #f3e8ff;
-            color: #3b0764;
-            align-self: flex-end;
-            border-right: 4px solid var(--accent-purple);
-        }
-
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #ffffff;
-            border-top: 2px solid var(--border-color);
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 10px calc(8px + var(--safe-bottom)) 10px;
-            z-index: 50;
-            max-width: 600px;
-            margin: 0 auto;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.06);
-        }
-
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.72rem;
-            font-weight: 800;
-            gap: 3px;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-            background-color: #e0e7ff;
-        }
-
-        .nav-icon {
-            font-size: 1.3rem;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.75);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-        }
-
-        .modal-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .card-showcase {
-            background: white;
-            border-radius: 24px;
-            padding: 24px 18px;
-            width: 100%;
-            max-width: 380px;
-            text-align: center;
-            border: 4px solid var(--primary);
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
-        }
-
-        .showcase-icon {
-            font-size: 4rem;
-            margin-bottom: 8px;
-        }
-
-        .showcase-title {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: var(--primary);
-            margin-bottom: 8px;
-        }
-
-        .showcase-desc {
-            font-size: 1.15rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            margin-bottom: 20px;
-            background: #f1f5f9;
-            padding: 12px;
-            border-radius: 12px;
-            word-break: break-word;
-        }
-
-        .btn-full {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 800;
-            cursor: pointer;
-            background-color: var(--primary);
-            color: white;
-            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
-        }
-
-        .modal-card {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .modal-title {
-            font-size: 1.15rem;
-            font-weight: 800;
-            margin-bottom: 12px;
-        }
-
-        .emoji-selector {
-            display: flex;
-            gap: 6px;
-            overflow-x: auto;
-            padding: 6px 0;
-        }
-
-        .emoji-opt {
-            font-size: 1.5rem;
-            padding: 6px;
-            border-radius: 8px;
-            background: #f1f5f9;
-            cursor: pointer;
-        }
-
-        .toast-msg {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: #0f172a;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            font-weight: 800;
-            z-index: 200;
-            transition: transform 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .toast-msg.show {
-            transform: translateX(-50%) translateY(0);
-        }
-    </style>
-</head>
-<body>
-
-    <header>
-        <div class="header-top">
-            <div class="app-title">💬 TapTalk Pixel</div>
-            <div class="header-actions">
-                <div class="mode-badge active" id="modeTalkBtn" onclick="switchMode('talk')">💬 話す</div>
-                <div class="mode-badge" id="modeListenBtn" onclick="switchMode('listen')">🎤 聞く</div>
-            </div>
-        </div>
-        <div class="speech-display-box" id="speechDisplay">
-            <div class="speech-placeholder" id="speechPlaceholder">カードをタップするかマイクで話しかけてください</div>
-            <div class="speech-text" id="speechText" style="display: none;"></div>
-            <button class="replay-btn" id="replayBtn" style="display: none;" onclick="replayCurrentText()">
-                🔄 再生
-            </button>
-        </div>
-    </header>
-
-    <div class="tabs-wrapper" id="categoryTabs"></div>
-
-    <div class="calendar-box" id="calendarSection" style="display: none;">
-        <div class="calendar-title">📅 お休み・予定カードを作成</div>
-        <div class="form-row">
-            <label>日付を選択</label>
-            <input type="date" id="leaveDateInput">
-            <div class="quick-date-btns">
-                <button class="quick-btn" onclick="setQuickDate(0)">今日</button>
-                <button class="quick-btn" onclick="setQuickDate(1)">明日</button>
-                <button class="quick-btn" onclick="setQuickDate(2)">明後日</button>
-                <button class="quick-btn" onclick="setQuickDate(7)">来週</button>
-            </div>
-        </div>
-        <div class="form-row">
-            <label>区分・理由</label>
-            <select id="leaveReasonSelect">
-                <option value="お休みします">お休み（全休）</option>
-                <option value="体調不良でお休みをいただきます">体調不良のお休み</option>
-                <option value="午前半休をいただきます">午前半休</option>
-                <option value="午後半休をいただきます">午後半休</option>
-                <option value="遅刻します（遅れて参加します）">遅刻連絡</option>
-                <option value="早退します">早退連絡</option>
-            </select>
-        </div>
-        <button class="btn-full" onclick="generateLeaveCard()" style="background-color: var(--accent-purple);">
-            🃏 お休みカードを表示して伝える
-        </button>
-    </div>
-
-    <div class="stt-log-box" id="sttLogSection" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div style="font-weight: 800; font-size: 0.95rem; color: var(--accent-purple);">💬 会話のログ（タイムライン）</div>
-            <button onclick="clearLogs()" style="background:none; border:none; color:var(--text-muted); font-size:0.8rem; font-weight:800; cursor:pointer;">消去</button>
-        </div>
-        <div class="log-list" id="logList">
-            <div style="text-align: center; color: var(--text-muted); font-size:0.85rem; padding: 15px; font-weight:700;">会話記録がここに保存されます</div>
-        </div>
-    </div>
-
-    <div class="cards-grid" id="cardsGrid"></div>
-
-    <div class="bottom-nav">
-        <button class="nav-item active" id="navCards" onclick="switchNav('cards')">
-            <span class="nav-icon">💬</span>
-            <span>絵カード</span>
-        </button>
-        <button class="nav-item" id="navAdd" onclick="openAddModal()">
-            <span class="nav-icon">➕</span>
-            <span>作成</span>
-        </button>
-        <button class="nav-item" id="navListen" onclick="toggleSpeechRecognition()">
-            <span class="nav-icon">🎤</span>
-            <span>文字起こし</span>
-        </button>
-        <button class="nav-item" id="navManage" onclick="toggleManageMode()">
-            <span class="nav-icon">⚙️</span>
-            <span>整理</span>
-        </button>
-        <button class="nav-item" onclick="resetDefaultData()">
-            <span class="nav-icon">↺</span>
-            <span>リセット</span>
-        </button>
-    </div>
-
-    <div class="modal-overlay" id="showcaseModal">
-        <div class="card-showcase">
-            <div class="showcase-icon" id="showcaseIcon">📅</div>
-            <div class="showcase-title" id="showcaseTitle">お休み連絡</div>
-            <div class="showcase-desc" id="showcaseDesc">8月5日（水）<br>お休みをいただきます</div>
-            <button class="btn-full" onclick="closeShowcaseModal()">閉じる（保存されました）</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="addModal">
-        <div class="modal-card">
-            <div class="modal-title">新しい絵カードをつくる</div>
-            <div class="form-row">
-                <label>カテゴリ</label>
-                <select id="modalCategorySelect"></select>
-            </div>
-            <div class="form-row">
-                <label>絵文字アイコン</label>
-                <input type="text" id="modalIconInput" value="💬">
-                <div class="emoji-selector">
-                    <span class="emoji-opt" onclick="setModalIcon('✅')">✅</span>
-                    <span class="emoji-opt" onclick="setModalIcon('⏱️')">⏱️</span>
-                    <span class="emoji-opt" onclick="setModalIcon('🚻')">🚻</span>
-                    <span class="emoji-opt" onclick="setModalIcon('☕')">☕</span>
-                    <span class="emoji-opt" onclick="setModalIcon('📅')">📅</span>
-                    <span class="emoji-opt" onclick="setModalIcon('😊')">😊</span>
-                </div>
-            </div>
-            <div class="form-row">
-                <label>言葉（テキスト）</label>
-                <input type="text" id="modalTextInput" placeholder="例: お茶を飲みたいです">
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 15px;">
-                <button class="btn-full" style="background:#e2e8f0; color:#333;" onclick="closeAddModal()">キャンセル</button>
-                <button class="btn-full" onclick="saveNewCard()">保存</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="toast-msg" id="toastMsg">通知メッセージ</div>
-
-    <script>
+<script>
         const defaultCategories = [
             {
                 id: "work",
@@ -719,6 +71,7 @@
             }
         }
 
+        // ノイズが出ないよう改善したチャイム音再生
         function playTapChime() {
             try {
                 if (!audioCtx) {
@@ -727,17 +80,23 @@
                 if (audioCtx.state === 'suspended') {
                     audioCtx.resume();
                 }
+                const now = audioCtx.currentTime;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
+
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // A5
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1); // A5
+
+                // 音量を滑らかに落としてプツッ音を防止
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.linearRampToValueAtTime(0.0001, now + 0.1);
+
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+
+                osc.start(now);
+                osc.stop(now + 0.11);
             } catch (e) {}
         }
 
@@ -830,9 +189,10 @@
 
                 cardEl.onclick = () => {
                     triggerHaptic();
-                    playTapChime();
                     if (isManageMode) return;
+                    
                     if (currentCategoryId === "leave") {
+                        playTapChime();
                         showLeaveModal(card.icon, "お休み・予定連絡", card.text);
                     } else {
                         speakText(card.text, cardEl);
@@ -843,6 +203,7 @@
             });
         }
 
+        // ノイズ対策を施した音声発話処理
         function speakText(text, cardElement) {
             lastSpokenText = text;
 
@@ -859,16 +220,16 @@
 
             addLog('me', text);
 
+            // 音声認識が起動中なら一旦停止（マイクとスピーカーの衝突ノイズを防止）
+            if (isListening && recognition) {
+                shouldResumeRecognition = true;
+                try { recognition.stop(); } catch(e){}
+            }
+
+            playTapChime();
+
             if (synth) {
-                // 音声読み上げ中のフラグをON
                 isTTSSpeaking = true;
-
-                // もし音声認識が動いていたら一時停止（ノイズ干渉防止）
-                if (isListening && recognition) {
-                    shouldResumeRecognition = true;
-                    try { recognition.stop(); } catch(e){}
-                }
-
                 synth.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = "ja-JP";
@@ -881,14 +242,14 @@
                     displayBox.classList.remove("active");
                     isTTSSpeaking = false;
 
-                    // 読み上げ終了後、スピーカーの余韻が消えるのを待ってからマイクを安全に再開
+                    // 読み上げ終了後、スピーカーの余韻が完全に消えるのを待ってから（450ms）安全にマイクを再開
                     if (shouldResumeRecognition && isListening) {
                         setTimeout(() => {
                             if (isListening && !isTTSSpeaking && recognition) {
                                 try { recognition.start(); } catch(e){}
                             }
                             shouldResumeRecognition = false;
-                        }, 400);
+                        }, 450);
                     }
                 };
 
@@ -961,65 +322,141 @@
                 if (!isListening) toggleSpeechRecognition();
             } else {
                 logSec.style.display = "none";
-                if (isListening) toggleSpeechRecognition();
             }
         }
 
+        function switchNav(nav) {
+            triggerHaptic();
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (nav === 'cards') {
+                document.getElementById('navCards').classList.add('active');
+                if (isManageMode) toggleManageMode();
+            }
+        }
+
+        function toggleManageMode() {
+            triggerHaptic();
+            isManageMode = !isManageMode;
+            document.body.classList.toggle("manage-mode", isManageMode);
+            document.getElementById("navManage").classList.toggle("active", isManageMode);
+            showToast(isManageMode ? "整理モード（削除ボタン表示）" : "通常モード");
+        }
+
+        function openAddModal() {
+            triggerHaptic();
+            document.getElementById("addModal").classList.add("open");
+        }
+
+        function closeAddModal() {
+            triggerHaptic();
+            document.getElementById("addModal").classList.remove("open");
+        }
+
+        function setModalIcon(emoji) {
+            document.getElementById("modalIconInput").value = emoji;
+        }
+
+        function populateModalCategories() {
+            const select = document.getElementById("modalCategorySelect");
+            select.innerHTML = "";
+            appData.forEach(cat => {
+                if (cat.id !== "leave") {
+                    const opt = document.createElement("option");
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    select.appendChild(opt);
+                }
+            });
+        }
+
+        function saveNewCard() {
+            triggerHaptic();
+            const catId = document.getElementById("modalCategorySelect").value;
+            const icon = document.getElementById("modalIconInput").value || "💬";
+            const text = document.getElementById("modalTextInput").value.trim();
+
+            if (!text) {
+                showToast("言葉を入力してください");
+                return;
+            }
+
+            const category = appData.find(c => c.id === catId);
+            if (category) {
+                category.cards.push({
+                    id: "custom_" + Date.now(),
+                    icon: icon,
+                    text: text
+                });
+                saveData();
+                renderCards();
+                closeAddModal();
+                document.getElementById("modalTextInput").value = "";
+                showToast("カードを作成しました");
+            }
+        }
+
+        function deleteCard(event, cardId) {
+            event.stopPropagation();
+            triggerHaptic();
+            const category = appData.find(c => c.id === currentCategoryId);
+            if (category) {
+                category.cards = category.cards.filter(c => c.id !== cardId);
+                saveData();
+                renderCards();
+                showToast("カードを削除しました");
+            }
+        }
+
+        // 音声認識（文字起こし）の制御
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recognition = new SpeechRecognition();
-                recognition.lang = 'ja-JP';
-                recognition.continuous = true;
-                recognition.interimResults = true;
+            if (!SpeechRecognition) return;
 
-                recognition.onresult = (event) => {
-                    let finalTranscript = '';
-                    let interimTranscript = '';
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = true;
+            recognition.interimResults = true;
 
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
-                        } else {
-                            interimTranscript += event.results[i][0].transcript;
-                        }
+            recognition.onstart = () => {
+                isListening = true;
+                updateListenUI(true);
+            };
+
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
                     }
-
-                    const placeholder = document.getElementById("speechPlaceholder");
+                }
+                if (finalTranscript.trim() !== '') {
                     const speechText = document.getElementById("speechText");
+                    const placeholder = document.getElementById("speechPlaceholder");
                     const displayBox = document.getElementById("speechDisplay");
 
-                    if (interimTranscript || finalTranscript) {
-                        placeholder.style.display = "none";
-                        speechText.style.display = "block";
-                        speechText.textContent = finalTranscript || interimTranscript;
-                        displayBox.classList.add("listening");
-                    }
+                    placeholder.style.display = "none";
+                    speechText.style.display = "block";
+                    speechText.textContent = finalTranscript;
+                    displayBox.classList.add("listening");
 
-                    if (finalTranscript.trim()) {
-                        addLog('other', finalTranscript.trim());
-                    }
-                };
+                    addLog('other', finalTranscript);
+                }
+            };
 
-                recognition.onend = () => {
-                    // 読み上げ中や停止操作でなければ、自動的にマイクを再開（連続認識）
-                    if (isListening && !isTTSSpeaking) {
-                        try { recognition.start(); } catch(e){}
-                    } else if (!isListening) {
-                        const displayBox = document.getElementById("speechDisplay");
-                        displayBox.classList.remove("listening");
-                        updateListenNavBtn(false);
-                    }
-                };
+            recognition.onerror = (event) => {
+                console.log("音声認識エラー:", event.error);
+            };
 
-                recognition.onerror = (event) => {
-                    if (event.error === 'not-allowed') {
-                        showToast("マイクの使用許可が必要です");
-                        isListening = false;
-                        updateListenNavBtn(false);
-                    }
-                };
-            }
+            recognition.onend = () => {
+                // 読み上げ中や一時停止要求があるときは自動再開せず静かに待機
+                if (isListening && !shouldResumeRecognition && !isTTSSpeaking) {
+                    try {
+                        recognition.start();
+                    } catch (e) {}
+                } else if (!isListening) {
+                    updateListenUI(false);
+                }
+            };
         }
 
         function toggleSpeechRecognition() {
@@ -1036,162 +473,49 @@
                 isListening = false;
                 shouldResumeRecognition = false;
                 try { recognition.stop(); } catch(e){}
-                updateListenNavBtn(false);
+                updateListenUI(false);
                 showToast("文字起こしを停止しました");
             } else {
                 isListening = true;
+                shouldResumeRecognition = false;
                 try { recognition.start(); } catch(e){}
-                updateListenNavBtn(true);
-                showToast("文字起こしを開始しました（お話しください）");
+                updateListenUI(true);
+                showToast("文字起こしを開始しました");
             }
         }
 
-        function updateListenNavBtn(active) {
-            const navBtn = document.getElementById("navListen");
-            const modeBtn = document.getElementById("modeListenBtn");
+        function updateListenUI(active) {
+            const navListen = document.getElementById("navListen");
+            const speechDisplay = document.getElementById("speechDisplay");
             if (active) {
-                navBtn.classList.add("active");
-                if (modeBtn) modeBtn.classList.add("active");
+                navListen.classList.add("active");
+                speechDisplay.classList.add("listening");
             } else {
-                navBtn.classList.remove("active");
-                if (modeBtn) modeBtn.classList.remove("active");
+                navListen.classList.remove("active");
+                speechDisplay.classList.remove("listening");
             }
         }
 
-        function openAddModal() {
-            triggerHaptic();
-            populateModalCategories();
-            document.getElementById("modalTextInput").value = "";
-            document.getElementById("addModal").classList.add("open");
-        }
-
-        function closeAddModal() {
-            triggerHaptic();
-            document.getElementById("addModal").classList.remove("open");
-        }
-
-        function setModalIcon(icon) {
-            triggerHaptic();
-            document.getElementById("modalIconInput").value = icon;
-        }
-
-        function populateModalCategories() {
-            const select = document.getElementById("modalCategorySelect");
-            if (!select) return;
-            select.innerHTML = "";
-            appData.forEach(cat => {
-                const opt = document.createElement("option");
-                opt.value = cat.id;
-                opt.textContent = cat.name;
-                if (cat.id === currentCategoryId) opt.selected = true;
-                select.appendChild(opt);
-            });
-        }
-
-        function saveNewCard() {
-            triggerHaptic();
-            const catId = document.getElementById("modalCategorySelect").value;
-            const icon = document.getElementById("modalIconInput").value.trim() || "💬";
-            const text = document.getElementById("modalTextInput").value.trim();
-
-            if (!text) {
-                showToast("言葉を入力してください");
-                return;
-            }
-
-            const cat = appData.find(c => c.id === catId);
-            if (cat) {
-                cat.cards.push({
-                    id: "card_" + Date.now(),
-                    icon: icon,
-                    text: text
-                });
-                saveData();
-                currentCategoryId = catId;
-                renderCategoryTabs();
-                renderCards();
-                closeAddModal();
-                showToast("カードを作成しました");
-            }
-        }
-
-        function toggleManageMode() {
-            triggerHaptic();
-            isManageMode = !isManageMode;
-            document.body.classList.toggle("manage-mode", isManageMode);
-            const navBtn = document.getElementById("navManage");
-            if (isManageMode) {
-                navBtn.classList.add("active");
-                showToast("整理モード：カードの ✕ ボタンで削除できます");
-            } else {
-                navBtn.classList.remove("active");
-                showToast("整理モードを解除しました");
-            }
-        }
-
-        function deleteCard(event, cardId) {
-            event.stopPropagation();
-            triggerHaptic();
-            const cat = appData.find(c => c.id === currentCategoryId);
-            if (cat) {
-                cat.cards = cat.cards.filter(c => c.id !== cardId);
-                saveData();
-                renderCards();
-                showToast("カードを削除しました");
-            }
-        }
-
-        function resetDefaultData() {
-            triggerHaptic();
-            if (confirm("カードの設定を初期状態に戻しますか？（追加したカードも削除されます）")) {
-                localStorage.removeItem("taptalk_pixel_v1");
-                appData = JSON.parse(JSON.stringify(defaultCategories));
-                currentCategoryId = "work";
-                renderCategoryTabs();
-                renderCards();
-                showToast("初期状態に戻しました");
-            }
-        }
-
-        function switchNav(target) {
-            triggerHaptic();
-            document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
-                if (btn.id !== "navListen" && btn.id !== "navManage") {
-                    btn.classList.remove("active");
-                }
-            });
-
-            if (target === 'cards') {
-                document.getElementById("navCards").classList.add("active");
-                switchMode('talk');
-            }
-        }
-
-        function addLog(type, text) {
-            if (!text || !text.trim()) return;
-            const item = { type, text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-            conversationLogs.unshift(item);
+        function addLog(sender, text) {
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            conversationLogs.unshift({ sender, text, time });
             if (conversationLogs.length > 50) conversationLogs.pop();
-            try {
-                localStorage.setItem("taptalk_logs", JSON.stringify(conversationLogs));
-            } catch(e){}
+            localStorage.setItem("taptalk_logs", JSON.stringify(conversationLogs));
             renderLogs();
         }
 
         function renderLogs() {
-            const list = document.getElementById("logList");
-            if (!list) return;
+            const logList = document.getElementById("logList");
+            if (!logList) return;
             if (conversationLogs.length === 0) {
-                list.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size:0.85rem; padding: 15px; font-weight:700;">会話記録がここに保存されます</div>`;
+                logList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size:0.85rem; padding: 15px; font-weight:700;">会話記録がここに保存されます</div>`;
                 return;
             }
-            list.innerHTML = "";
-            conversationLogs.forEach(log => {
-                const item = document.createElement("div");
-                item.className = `log-item ${log.type === 'me' ? 'me' : 'other'}`;
-                item.textContent = `[${log.time}] ${log.text}`;
-                list.appendChild(item);
-            });
+            logList.innerHTML = conversationLogs.map(log => `
+                <div class="log-item ${log.sender}">
+                    <span style="font-size:0.75rem; opacity:0.8; margin-right:4px;">[${log.time}]</span> ${log.text}
+                </div>
+            `).join('');
         }
 
         function clearLogs() {
@@ -1202,9 +526,18 @@
             showToast("ログを消去しました");
         }
 
-        window.onload = () => {
-            initApp();
-        };
+        function resetDefaultData() {
+            triggerHaptic();
+            if (confirm("カードを初期状態に戻しますか？（作成したカードも消去されます）")) {
+                appData = defaultCategories;
+                saveData();
+                renderCategoryTabs();
+                renderCards();
+                showToast("リセットしました");
+            }
+        }
+
+        window.onload = initApp;
     </script>
 </body>
 </html>
