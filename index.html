@@ -705,6 +705,8 @@
         let lastSpokenText = "";
         let isManageMode = false;
         let isListening = false;
+        let isTTSSpeaking = false;
+        let shouldResumeRecognition = false;
         let recognition = null;
         let conversationLogs = [];
 
@@ -755,7 +757,6 @@
             renderCards();
             populateModalCategories();
             initSpeechRecognition();
-            registerInlinePWA();
         }
 
         function loadData() {
@@ -859,6 +860,15 @@
             addLog('me', text);
 
             if (synth) {
+                // 音声読み上げ中のフラグをON
+                isTTSSpeaking = true;
+
+                // もし音声認識が動いていたら一時停止（ノイズ干渉防止）
+                if (isListening && recognition) {
+                    shouldResumeRecognition = true;
+                    try { recognition.stop(); } catch(e){}
+                }
+
                 synth.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = "ja-JP";
@@ -866,15 +876,24 @@
 
                 if (cardElement) cardElement.classList.add("speaking");
 
-                utterance.onend = () => {
+                const finishSpeaking = () => {
                     if (cardElement) cardElement.classList.remove("speaking");
                     displayBox.classList.remove("active");
+                    isTTSSpeaking = false;
+
+                    // 読み上げ終了後、スピーカーの余韻が消えるのを待ってからマイクを安全に再開
+                    if (shouldResumeRecognition && isListening) {
+                        setTimeout(() => {
+                            if (isListening && !isTTSSpeaking && recognition) {
+                                try { recognition.start(); } catch(e){}
+                            }
+                            shouldResumeRecognition = false;
+                        }, 400);
+                    }
                 };
 
-                utterance.onerror = () => {
-                    if (cardElement) cardElement.classList.remove("speaking");
-                    displayBox.classList.remove("active");
-                };
+                utterance.onend = finishSpeaking;
+                utterance.onerror = finishSpeaking;
 
                 synth.speak(utterance);
             }
@@ -957,28 +976,47 @@
                 recognition.onresult = (event) => {
                     let finalTranscript = '';
                     let interimTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
                             finalTranscript += event.results[i][0].transcript;
                         } else {
                             interimTranscript += event.results[i][0].transcript;
                         }
                     }
-                    const text = finalTranscript || interimTranscript;
-                    if (text) {
-                        document.getElementById("speechPlaceholder").style.display = "none";
-                        const speechText = document.getElementById("speechText");
+
+                    const placeholder = document.getElementById("speechPlaceholder");
+                    const speechText = document.getElementById("speechText");
+                    const displayBox = document.getElementById("speechDisplay");
+
+                    if (interimTranscript || finalTranscript) {
+                        placeholder.style.display = "none";
                         speechText.style.display = "block";
-                        speechText.textContent = "🎤 " + text;
+                        speechText.textContent = finalTranscript || interimTranscript;
+                        displayBox.classList.add("listening");
                     }
-                    if (finalTranscript) {
-                        addLog('other', finalTranscript);
+
+                    if (finalTranscript.trim()) {
+                        addLog('other', finalTranscript.trim());
                     }
                 };
 
                 recognition.onend = () => {
-                    if (isListening) {
+                    // 読み上げ中や停止操作でなければ、自動的にマイクを再開（連続認識）
+                    if (isListening && !isTTSSpeaking) {
                         try { recognition.start(); } catch(e){}
+                    } else if (!isListening) {
+                        const displayBox = document.getElementById("speechDisplay");
+                        displayBox.classList.remove("listening");
+                        updateListenNavBtn(false);
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    if (event.error === 'not-allowed') {
+                        showToast("マイクの使用許可が必要です");
+                        isListening = false;
+                        updateListenNavBtn(false);
                     }
                 };
             }
@@ -987,40 +1025,156 @@
         function toggleSpeechRecognition() {
             triggerHaptic();
             if (!recognition) {
-                showToast("お使いのブラウザは音声文字起こし機能に対応していません");
-                return;
+                initSpeechRecognition();
+                if (!recognition) {
+                    showToast("お使いのブラウザは音声認識に対応していません");
+                    return;
+                }
             }
 
-            isListening = !isListening;
-            const btn = document.getElementById("navListen");
-            const displayBox = document.getElementById("speechDisplay");
-
             if (isListening) {
-                try {
-                    recognition.start();
-                    btn.classList.add("active");
-                    displayBox.classList.add("listening");
-                    document.getElementById("speechPlaceholder").style.display = "none";
-                    document.getElementById("speechText").style.display = "block";
-                    document.getElementById("speechText").textContent = "🎤 マイクで話し声を聞き取っています...";
-                    showToast("文字起こしを開始しました");
-                } catch(e){}
-            } else {
-                recognition.stop();
-                btn.classList.remove("active");
-                displayBox.classList.remove("listening");
+                isListening = false;
+                shouldResumeRecognition = false;
+                try { recognition.stop(); } catch(e){}
+                updateListenNavBtn(false);
                 showToast("文字起こしを停止しました");
+            } else {
+                isListening = true;
+                try { recognition.start(); } catch(e){}
+                updateListenNavBtn(true);
+                showToast("文字起こしを開始しました（お話しください）");
             }
         }
 
-        function addLog(sender, text) {
-            if (!text) return;
-            conversationLogs.push({
-                sender,
-                text,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        function updateListenNavBtn(active) {
+            const navBtn = document.getElementById("navListen");
+            const modeBtn = document.getElementById("modeListenBtn");
+            if (active) {
+                navBtn.classList.add("active");
+                if (modeBtn) modeBtn.classList.add("active");
+            } else {
+                navBtn.classList.remove("active");
+                if (modeBtn) modeBtn.classList.remove("active");
+            }
+        }
+
+        function openAddModal() {
+            triggerHaptic();
+            populateModalCategories();
+            document.getElementById("modalTextInput").value = "";
+            document.getElementById("addModal").classList.add("open");
+        }
+
+        function closeAddModal() {
+            triggerHaptic();
+            document.getElementById("addModal").classList.remove("open");
+        }
+
+        function setModalIcon(icon) {
+            triggerHaptic();
+            document.getElementById("modalIconInput").value = icon;
+        }
+
+        function populateModalCategories() {
+            const select = document.getElementById("modalCategorySelect");
+            if (!select) return;
+            select.innerHTML = "";
+            appData.forEach(cat => {
+                const opt = document.createElement("option");
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                if (cat.id === currentCategoryId) opt.selected = true;
+                select.appendChild(opt);
             });
-            localStorage.setItem("taptalk_logs", JSON.stringify(conversationLogs));
+        }
+
+        function saveNewCard() {
+            triggerHaptic();
+            const catId = document.getElementById("modalCategorySelect").value;
+            const icon = document.getElementById("modalIconInput").value.trim() || "💬";
+            const text = document.getElementById("modalTextInput").value.trim();
+
+            if (!text) {
+                showToast("言葉を入力してください");
+                return;
+            }
+
+            const cat = appData.find(c => c.id === catId);
+            if (cat) {
+                cat.cards.push({
+                    id: "card_" + Date.now(),
+                    icon: icon,
+                    text: text
+                });
+                saveData();
+                currentCategoryId = catId;
+                renderCategoryTabs();
+                renderCards();
+                closeAddModal();
+                showToast("カードを作成しました");
+            }
+        }
+
+        function toggleManageMode() {
+            triggerHaptic();
+            isManageMode = !isManageMode;
+            document.body.classList.toggle("manage-mode", isManageMode);
+            const navBtn = document.getElementById("navManage");
+            if (isManageMode) {
+                navBtn.classList.add("active");
+                showToast("整理モード：カードの ✕ ボタンで削除できます");
+            } else {
+                navBtn.classList.remove("active");
+                showToast("整理モードを解除しました");
+            }
+        }
+
+        function deleteCard(event, cardId) {
+            event.stopPropagation();
+            triggerHaptic();
+            const cat = appData.find(c => c.id === currentCategoryId);
+            if (cat) {
+                cat.cards = cat.cards.filter(c => c.id !== cardId);
+                saveData();
+                renderCards();
+                showToast("カードを削除しました");
+            }
+        }
+
+        function resetDefaultData() {
+            triggerHaptic();
+            if (confirm("カードの設定を初期状態に戻しますか？（追加したカードも削除されます）")) {
+                localStorage.removeItem("taptalk_pixel_v1");
+                appData = JSON.parse(JSON.stringify(defaultCategories));
+                currentCategoryId = "work";
+                renderCategoryTabs();
+                renderCards();
+                showToast("初期状態に戻しました");
+            }
+        }
+
+        function switchNav(target) {
+            triggerHaptic();
+            document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
+                if (btn.id !== "navListen" && btn.id !== "navManage") {
+                    btn.classList.remove("active");
+                }
+            });
+
+            if (target === 'cards') {
+                document.getElementById("navCards").classList.add("active");
+                switchMode('talk');
+            }
+        }
+
+        function addLog(type, text) {
+            if (!text || !text.trim()) return;
+            const item = { type, text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+            conversationLogs.unshift(item);
+            if (conversationLogs.length > 50) conversationLogs.pop();
+            try {
+                localStorage.setItem("taptalk_logs", JSON.stringify(conversationLogs));
+            } catch(e){}
             renderLogs();
         }
 
@@ -1032,13 +1186,12 @@
                 return;
             }
             list.innerHTML = "";
-            conversationLogs.forEach(l => {
-                const d = document.createElement("div");
-                d.className = `log-item ${l.sender}`;
-                d.textContent = `[${l.time}] ${l.sender === 'me' ? '自分' : '相手'}: ${l.text}`;
-                list.appendChild(d);
+            conversationLogs.forEach(log => {
+                const item = document.createElement("div");
+                item.className = `log-item ${log.type === 'me' ? 'me' : 'other'}`;
+                item.textContent = `[${log.time}] ${log.text}`;
+                list.appendChild(item);
             });
-            list.scrollTop = list.scrollHeight;
         }
 
         function clearLogs() {
@@ -1046,109 +1199,12 @@
             conversationLogs = [];
             localStorage.removeItem("taptalk_logs");
             renderLogs();
+            showToast("ログを消去しました");
         }
 
-        function toggleManageMode() {
-            triggerHaptic();
-            isManageMode = !isManageMode;
-            document.body.classList.toggle("manage-mode", isManageMode);
-            document.getElementById("navManage").classList.toggle("active", isManageMode);
-            showToast(isManageMode ? "削除したいカードの「✕」を押してください" : "カード整理を終了しました");
-        }
-
-        function deleteCard(event, cardId) {
-            event.stopPropagation();
-            triggerHaptic();
-            const currentCat = appData.find(c => c.id === currentCategoryId);
-            if (currentCat) {
-                currentCat.cards = currentCat.cards.filter(c => c.id !== cardId);
-                saveData();
-                renderCards();
-            }
-        }
-
-        function populateModalCategories() {
-            const select = document.getElementById("modalCategorySelect");
-            select.innerHTML = "";
-            appData.forEach(cat => {
-                const opt = document.createElement("option");
-                opt.value = cat.id;
-                opt.textContent = cat.name;
-                select.appendChild(opt);
-            });
-        }
-
-        function openAddModal() {
-            triggerHaptic();
-            document.getElementById("modalCategorySelect").value = currentCategoryId;
-            document.getElementById("modalTextInput").value = "";
-            document.getElementById("addModal").classList.add("open");
-        }
-
-        function closeAddModal() {
-            triggerHaptic();
-            document.getElementById("addModal").classList.remove("open");
-        }
-
-        function setModalIcon(emoji) {
-            triggerHaptic();
-            document.getElementById("modalIconInput").value = emoji;
-        }
-
-        function saveNewCard() {
-            triggerHaptic();
-            const categoryId = document.getElementById("modalCategorySelect").value;
-            const icon = document.getElementById("modalIconInput").value.trim() || "💬";
-            const text = document.getElementById("modalTextInput").value.trim();
-
-            if (!text) return;
-
-            const targetCat = appData.find(c => c.id === categoryId);
-            if (targetCat) {
-                targetCat.cards.push({ id: "custom_" + Date.now(), icon, text });
-                saveData();
-                currentCategoryId = categoryId;
-                renderCategoryTabs();
-                renderCards();
-                closeAddModal();
-                showToast("新しいカードを追加しました");
-            }
-        }
-
-        function resetDefaultData() {
-            triggerHaptic();
-            localStorage.removeItem("taptalk_pixel_v1");
-            localStorage.removeItem("taptalk_logs");
-            loadData();
-            renderCategoryTabs();
-            renderCards();
-            showToast("初期データに戻しました");
-        }
-
-        function registerInlinePWA() {
-            const manifest = {
-                name: "TapTalk絵カード",
-                short_name: "TapTalk",
-                start_url: "./",
-                display: "standalone",
-                background_color: "#f8fafc",
-                theme_color: "#4f46e5",
-                icons: [{
-                    src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>",
-                    sizes: "192x192",
-                    type: "image/svg+xml"
-                }]
-            };
-            const stringManifest = JSON.stringify(manifest);
-            const blob = new Blob([stringManifest], {type: 'application/json'});
-            const manifestURL = URL.createObjectURL(blob);
-            const link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = manifestURL;
-            document.head.appendChild(link);
-        }
-
-        window.onload = initApp;
+        window.onload = () => {
+            initApp();
+        };
     </script>
 </body>
 </html>
