@@ -148,7 +148,7 @@
         }
         body.manage-mode .delete-card-btn { display: block; }
 
-        /* お休みカレンダー表示 */
+        /* お休み・日付連絡セクション */
         #calendarSection {
             display: none;
             background: var(--card-bg);
@@ -157,8 +157,27 @@
             margin-bottom: 12px;
             border: 1px solid #e2e8f0;
         }
-        .quick-dates { display: flex; gap: 8px; margin-top: 10px; }
+        .quick-dates { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
         .quick-dates button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-weight: bold; }
+        
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .type-btn {
+            padding: 12px 8px;
+            border-radius: 10px;
+            border: 1.5px solid var(--primary);
+            background: #eef2ff;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-align: center;
+        }
+        .type-btn:active { background: var(--primary); color: white; }
 
         /* モーダル */
         .modal {
@@ -220,14 +239,24 @@
 
     <!-- お休み・予定設定セクション -->
     <div id="calendarSection">
-        <h3 style="margin:0 0 10px 0; font-size:1rem;">📅 日付指定連絡</h3>
+        <h3 style="margin:0 0 8px 0; font-size:1rem;">📅 日付を選んでワンタッチ連絡</h3>
         <input type="date" id="leaveDateInput" style="width:100%; padding:10px; font-size:1rem; border-radius:8px; border:1px solid #cbd5e1;">
+        
         <div class="quick-dates">
             <button onclick="setQuickDate(0)">今日</button>
             <button onclick="setQuickDate(1)">明日</button>
             <button onclick="setQuickDate(2)">明後日</button>
         </div>
-        <button onclick="generateLeaveCard()" style="margin-top: 12px; padding: 12px; width: 100%; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size:1rem;">日付付きカードを作成</button>
+
+        <div style="font-size:0.85rem; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">タップしてカード作成＆送信:</div>
+        <div class="type-grid">
+            <button class="type-btn" onclick="generateLeaveCard('お休みします', '📅')">📅 お休み</button>
+            <button class="type-btn" onclick="generateLeaveCard('少し遅刻します', '⏱️')">⏱️ 遅刻</button>
+            <button class="type-btn" onclick="generateLeaveCard('午前中お休みします', '🌅')">🌅 午前休</button>
+            <button class="type-btn" onclick="generateLeaveCard('午後からお休みします', '🌇')">🌇 午後休</button>
+            <button class="type-btn" onclick="generateLeaveCard('早退させていただきます', '🏃‍♂️')">🏃‍♂️ 早退</button>
+            <button class="type-btn" onclick="generateLeaveCard('通院のため遅れます', '🏥')">🏥 通院遅刻</button>
+        </div>
     </div>
 
     <!-- カテゴリタブ -->
@@ -247,7 +276,7 @@
             <input type="text" id="modalIcon" placeholder="例: ⏱️" value="💬">
 
             <label>話す言葉（テキスト）</label>
-            <input type="text" id="modalText" placeholder="例: 10分遅刻します / 午前半休をいただきます">
+            <input type="text" id="modalText" placeholder="例: 電車遅延で遅れます">
 
             <div style="display:flex; gap:8px;">
                 <button onclick="closeAddModal()" style="flex:1; padding:12px; border-radius:8px; border:1px solid #ccc; background:#fff;">キャンセル</button>
@@ -310,12 +339,7 @@
             {
                 id: "leave",
                 name: "📅 お休み・遅刻",
-                cards: [
-                    { id: "l1", icon: "⏱️", text: "少し遅刻します。" },
-                    { id: "l2", icon: "🏃‍♂️", text: "体調不良のため早退します。" },
-                    { id: "l3", icon: "🌅", text: "午前中お休みします。" },
-                    { id: "l4", icon: "🌇", text: "午後からお休みします。" }
-                ]
+                cards: []
             }
         ];
 
@@ -602,7 +626,7 @@
             }
         }
 
-        function generateLeaveCard() {
+        function generateLeaveCard(typeText, icon) {
             triggerHaptic();
             const dateInput = document.getElementById("leaveDateInput");
             if (!dateInput || !dateInput.value) return;
@@ -610,13 +634,13 @@
             const dateObj = new Date(dateInput.value);
             const days = ['日', '月', '火', '水', '木', '金', '土'];
             const dateStr = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${days[dateObj.getDay()]}）`;
-            const fullText = `${dateStr} お休みします`;
+            const fullText = `${dateStr} ${typeText}`;
 
             const leaveCat = appData.find(c => c.id === "leave");
             if (leaveCat) {
                 leaveCat.cards.push({
                     id: "leave_" + Date.now(),
-                    icon: "📅",
+                    icon: icon || "📅",
                     text: fullText
                 });
                 saveData();
