@@ -108,19 +108,20 @@
         setTimeout(() => toast.classList.remove("show"), 2500);
     }
 
-    function initApp() {
-        loadData();
-        const leaveDateInput = document.getElementById("leaveDateInput");
-        if (leaveDateInput) {
-            const today = new Date().toISOString().split('T')[0];
-            leaveDateInput.value = today;
-        }
-
-        renderCategoryTabs();
-        renderCards();
-        populateModalCategories();
-        initSpeechRecognition();
+   function initApp() {
+    loadData();
+    
+    const leaveDateInput = document.getElementById("leaveDateInput");
+    if (leaveDateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        leaveDateInput.value = today;
     }
+
+    renderCategoryTabs();
+    renderCards();
+    populateModalCategories();
+    initSpeechRecognition();
+}
 
     function loadData() {
         const savedData = localStorage.getItem("taptalk_pixel_v1");
