@@ -1,583 +1,574 @@
 <script>
-        const defaultCategories = [
-            {
-                id: "work",
-                name: "作業・指示確認",
-                cards: [
-                    { id: "w1", icon: "✅", text: "確認をお願いします。" },
-                    { id: "w2", icon: "⏱️", text: "あと何分作業したほうがいいですか？" },
-                    { id: "w3", icon: "🧹", text: "掃除場所はどこですか？" },
-                    { id: "w4", icon: "🪑", text: "椅子に座って作業していいですか？" },
-                    { id: "w5", icon: "❓", text: "わからないことがあるので来ていただけますか？" },
-                    { id: "w6", icon: "🔄", text: "もう一度説明をお願いできますか？" },
-                    { id: "w7", icon: "📄", text: "次のスケジュールは何ですか？" }
-                ]
-            },
-            {
-                id: "morning",
-                name: "朝礼・挨拶",
-                cards: [
-                    { id: "m1", icon: "🌅", text: "みなさんおはようございます！" },
-                    { id: "m2", icon: "🤝", text: "よろしくお願いいたします。" },
-                    { id: "m3", icon: "🙋‍♂️", text: "はい、出席しています。" },
-                    { id: "m4", icon: "🚪", text: "お先に失礼します。お疲れ様でした！" },
-                    { id: "m5", icon: "👋", text: "御用は何でしょうか？" }
-                ]
-            },
-            {
-                id: "health",
-                name: "体調・移動",
-                cards: [
-                    { id: "h1", icon: "🚻", text: "トイレに行っていいですか？" },
-                    { id: "h2", icon: "☕", text: "5分休憩してもいいですか？" },
-                    { id: "h3", icon: "🤒", text: "少し体調がすぐれません。" },
-                    { id: "h4", icon: "🙆‍♂️", text: "大丈夫です！問題ありません。" }
-                ]
-            },
-            {
-                id: "chat",
-                name: "雑談・やり取り",
-                cards: [
-                    { id: "c1", icon: "😊", text: "ありがとうございます！" },
-                    { id: "c2", icon: "👉", text: "今、お時間いいですか？" },
-                    { id: "c3", icon: "👏", text: "そうなんですね！" },
-                    { id: "c4", icon: "🎮", text: "趣味やお話しをしませんか？" },
-                    { id: "c5", icon: "🍱", text: "一緒にお昼どうですか？" }
-                ]
-            },
-            {
-                id: "leave",
-                name: "📅 予定・お休み",
-                cards: []
+    const defaultCategories = [
+        {
+            id: "work",
+            name: "作業・指示確認",
+            cards: [
+                { id: "w1", icon: "✅", text: "確認をお願いします。" },
+                { id: "w2", icon: "⏱️", text: "あと何分作業したほうがいいですか？" },
+                { id: "w3", icon: "🧹", text: "掃除場所はどこですか？" },
+                { id: "w4", icon: "🪑", text: "椅子に座って作業していいですか？" },
+                { id: "w5", icon: "❓", text: "わからないことがあるので来ていただけますか？" },
+                { id: "w6", icon: "🔄", text: "もう一度説明をお願いできますか？" },
+                { id: "w7", icon: "📄", text: "次のスケジュールは何ですか？" }
+            ]
+        },
+        {
+            id: "morning",
+            name: "朝礼・挨拶",
+            cards: [
+                { id: "m1", icon: "🌅", text: "みなさんおはようございます！" },
+                { id: "m2", icon: "🤝", text: "よろしくお願いいたします。" },
+                { id: "m3", icon: "🙋‍♂️", text: "はい、出席しています。" },
+                { id: "m4", icon: "🚪", text: "お先に失礼します。お疲れ様でした！" },
+                { id: "m5", icon: "👋", text: "御用は何でしょうか？" }
+            ]
+        },
+        {
+            id: "health",
+            name: "体調・移動",
+            cards: [
+                { id: "h1", icon: "🚻", text: "トイレに行っていいですか？" },
+                { id: "h2", icon: "☕", text: "5分休憩してもいいですか？" },
+                { id: "h3", icon: "🤒", text: "少し体調がすぐれません。" },
+                { id: "h4", icon: "🙆‍♂️", text: "大丈夫です！問題ありません。" }
+            ]
+        },
+        {
+            id: "chat",
+            name: "雑談・やり取り",
+            cards: [
+                { id: "c1", icon: "😊", text: "ありがとうございます！" },
+                { id: "c2", icon: "👉", text: "今、お時間いいですか？" },
+                { id: "c3", icon: "👏", text: "そうなんですね！" },
+                { id: "c4", icon: "🎮", text: "趣味やお話しをしませんか？" },
+                { id: "c5", icon: "🍱", text: "一緒にお昼どうですか？" }
+            ]
+        },
+        {
+            id: "leave",
+            name: "📅 予定・お休み",
+            cards: []
+        }
+    ];
+
+    let appData = [];
+    let currentCategoryId = "work";
+    let lastSpokenText = "";
+    let isManageMode = false;
+    let isListening = false;
+    let isTTSSpeaking = false;
+    let shouldResumeRecognition = false;
+    let recognition = null;
+    let conversationLogs = [];
+
+    const synth = window.speechSynthesis;
+    let audioCtx = null;
+
+    function triggerHaptic() {
+        if (navigator.vibrate) {
+            navigator.vibrate(30);
+        }
+    }
+
+    // ノイズが出ないよう改善したチャイム音再生
+    function playTapChime() {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-        ];
-
-        let appData = [];
-        let currentCategoryId = "work";
-        let lastSpokenText = "";
-        let isManageMode = false;
-        let isListening = false;
-        let isTTSSpeaking = false;
-        let shouldResumeRecognition = false;
-        let recognition = null;
-        let conversationLogs = [];
-
-        const synth = window.speechSynthesis;
-        let audioCtx = null;
-
-        function triggerHaptic() {
-            if (navigator.vibrate) {
-                navigator.vibrate(30);
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
             }
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.1); // A5
+
+            // 音量を滑らかに落としてプツッ音を防止
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.linearRampToValueAtTime(0.0001, now + 0.1);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.11);
+        } catch (e) {}
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById("toastMsg");
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2500);
+    }
+
+    function initApp() {
+        loadData();
+        const leaveDateInput = document.getElementById("leaveDateInput");
+        if (leaveDateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            leaveDateInput.value = today;
         }
 
-        // ノイズが出ないよう改善したチャイム音再生
-        function playTapChime() {
+        renderCategoryTabs();
+        renderCards();
+        populateModalCategories();
+        initSpeechRecognition();
+    }
+
+    function loadData() {
+        const savedData = localStorage.getItem("taptalk_pixel_v1");
+        if (savedData) {
             try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, now); // D5
-                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1); // A5
-
-                // 音量を滑らかに落としてプツッ音を防止
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.linearRampToValueAtTime(0.0001, now + 0.1);
-
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                osc.start(now);
-                osc.stop(now + 0.11);
-            } catch (e) {}
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById("toastMsg");
-            if (toast) {
-                toast.textContent = msg;
-                toast.classList.add("show");
-                setTimeout(() => toast.classList.remove("show"), 2500);
-            }
-        }
-
-        function initApp() {
-            loadData();
-            
-            // 安全対策：要素が存在する場合のみ日付を自動入力（Nullエラー防止）
-            const leaveInput = document.getElementById("leaveDateInput");
-            if (leaveInput) {
-                const today = new Date().toISOString().split('T')[0];
-                leaveInput.value = today;
-            }
-
-            renderCategoryTabs();
-            renderCards();
-            populateModalCategories();
-            initSpeechRecognition();
-        }
-
-        function loadData() {
-            const savedData = localStorage.getItem("taptalk_pixel_v1");
-            if (savedData) {
-                try {
-                    appData = JSON.parse(savedData);
-                } catch (e) {
-                    appData = defaultCategories;
-                }
-            } else {
+                appData = JSON.parse(savedData);
+            } catch (e) {
                 appData = defaultCategories;
             }
-
-            const savedLogs = localStorage.getItem("taptalk_logs");
-            if (savedLogs) {
-                try { conversationLogs = JSON.parse(savedLogs); } catch(e){}
-            }
-            renderLogs();
+        } else {
+            appData = defaultCategories;
         }
 
-        function saveData() {
-            localStorage.setItem("taptalk_pixel_v1", JSON.stringify(appData));
+        const savedLogs = localStorage.getItem("taptalk_logs");
+        if (savedLogs) {
+            try { conversationLogs = JSON.parse(savedLogs); } catch(e){}
         }
+        renderLogs();
+    }
 
-        function renderCategoryTabs() {
-            const tabsContainer = document.getElementById("categoryTabs");
-            if (!tabsContainer) return;
-            
-            tabsContainer.innerHTML = "";
+    function saveData() {
+        localStorage.setItem("taptalk_pixel_v1", JSON.stringify(appData));
+    }
 
-            appData.forEach(cat => {
-                const btn = document.createElement("button");
-                btn.className = `tab-btn ${cat.id === currentCategoryId ? 'active' : ''}`;
-                btn.textContent = cat.name;
-                btn.onclick = () => {
-                    triggerHaptic();
-                    currentCategoryId = cat.id;
-                    renderCategoryTabs();
-                    renderCards();
-                };
-                tabsContainer.appendChild(btn);
-            });
-        }
+    function renderCategoryTabs() {
+        const tabsContainer = document.getElementById("categoryTabs");
+        if (!tabsContainer) return;
+        tabsContainer.innerHTML = "";
 
-        function renderCards() {
-            const grid = document.getElementById("cardsGrid");
-            const calSection = document.getElementById("calendarSection");
-            if (!grid) return;
-
-            grid.innerHTML = "";
-
-            if (calSection) {
-                calSection.style.display = (currentCategoryId === "leave") ? "block" : "none";
-            }
-
-            const currentCat = appData.find(c => c.id === currentCategoryId);
-            if (!currentCat || currentCat.cards.length === 0) {
-                if (currentCategoryId !== "leave") {
-                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px 0; font-weight:700;">カードがありません。「作成」ボタンから追加できます</div>`;
-                }
-                return;
-            }
-
-            currentCat.cards.forEach(card => {
-                const cardEl = document.createElement("div");
-                cardEl.className = "card";
-                cardEl.innerHTML = `
-                    <button class="delete-card-btn" onclick="deleteCard(event, '${card.id}')">✕</button>
-                    <div class="card-icon">${card.icon}</div>
-                    <div class="card-text">${card.text}</div>
-                `;
-
-                cardEl.onclick = () => {
-                    triggerHaptic();
-                    if (isManageMode) return;
-                    
-                    if (currentCategoryId === "leave") {
-                        playTapChime();
-                        showLeaveModal(card.icon, "お休み・予定連絡", card.text);
-                    } else {
-                        speakText(card.text, cardEl);
-                    }
-                };
-
-                grid.appendChild(cardEl);
-            });
-        }
-
-        // ノイズ対策を施した音声発話処理
-        function speakText(text, cardElement) {
-            lastSpokenText = text;
-
-            const placeholder = document.getElementById("speechPlaceholder");
-            const speechText = document.getElementById("speechText");
-            const replayBtn = document.getElementById("replayBtn");
-            const displayBox = document.getElementById("speechDisplay");
-
-            if (placeholder) placeholder.style.display = "none";
-            if (speechText) {
-                speechText.style.display = "block";
-                speechText.textContent = text;
-            }
-            if (replayBtn) replayBtn.style.display = "flex";
-            if (displayBox) displayBox.classList.add("active");
-
-            addLog('me', text);
-
-            // 音声認識が起動中なら一旦停止（マイクとスピーカーの衝突ノイズを防止）
-            if (isListening && recognition) {
-                shouldResumeRecognition = true;
-                try { recognition.stop(); } catch(e){}
-            }
-
-            playTapChime();
-
-            if (synth) {
-                isTTSSpeaking = true;
-                synth.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = "ja-JP";
-                utterance.rate = 1.0;
-
-                if (cardElement) cardElement.classList.add("speaking");
-
-                const finishSpeaking = () => {
-                    if (cardElement) cardElement.classList.remove("speaking");
-                    if (displayBox) displayBox.classList.remove("active");
-                    isTTSSpeaking = false;
-
-                    // 読み上げ終了後、スピーカーの余韻が完全に消えるのを待ってから（450ms）安全にマイクを再開
-                    if (shouldResumeRecognition && isListening) {
-                        setTimeout(() => {
-                            if (isListening && !isTTSSpeaking && recognition) {
-                                try { recognition.start(); } catch(e){}
-                            }
-                            shouldResumeRecognition = false;
-                        }, 450);
-                    }
-                };
-
-                utterance.onend = finishSpeaking;
-                utterance.onerror = finishSpeaking;
-
-                synth.speak(utterance);
-            }
-        }
-
-        function setQuickDate(addDays) {
-            triggerHaptic();
-            const d = new Date();
-            d.setDate(d.getDate() + addDays);
-            const input = document.getElementById("leaveDateInput");
-            if (input) input.value = d.toISOString().split('T')[0];
-        }
-
-        function generateLeaveCard() {
-            triggerHaptic();
-            const dateInput = document.getElementById("leaveDateInput");
-            const reasonInput = document.getElementById("leaveReasonSelect");
-            
-            if (!dateInput || !reasonInput) return;
-            
-            const dateVal = dateInput.value;
-            const reason = reasonInput.value;
-
-            if (!dateVal) return;
-
-            const dateObj = new Date(dateVal);
-            const days = ['日', '月', '火', '水', '木', '金', '土'];
-            const dateStr = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${days[dateObj.getDay()]}）`;
-            const fullText = `${dateStr} ${reason}`;
-
-            const leaveCat = appData.find(c => c.id === "leave");
-            if (leaveCat) {
-                leaveCat.cards.push({
-                    id: "leave_" + Date.now(),
-                    icon: "📅",
-                    text: fullText
-                });
-                saveData();
-                renderCards();
-            }
-
-            showLeaveModal("📅", "お休み・予定の連絡", fullText);
-        }
-
-        function showLeaveModal(icon, title, desc) {
-            const showcaseIcon = document.getElementById("showcaseIcon");
-            const showcaseTitle = document.getElementById("showcaseTitle");
-            const showcaseDesc = document.getElementById("showcaseDesc");
-            const showcaseModal = document.getElementById("showcaseModal");
-
-            if (showcaseIcon) showcaseIcon.textContent = icon;
-            if (showcaseTitle) showcaseTitle.textContent = title;
-            if (showcaseDesc) showcaseDesc.textContent = desc;
-            if (showcaseModal) showcaseModal.classList.add("open");
-
-            speakText(desc, null);
-        }
-
-        function closeShowcaseModal() {
-            triggerHaptic();
-            const showcaseModal = document.getElementById("showcaseModal");
-            if (showcaseModal) showcaseModal.classList.remove("open");
-        }
-
-        function replayCurrentText() {
-            triggerHaptic();
-            if (lastSpokenText) speakText(lastSpokenText, null);
-        }
-
-        function switchMode(mode) {
-            triggerHaptic();
-            const modeTalkBtn = document.getElementById("modeTalkBtn");
-            const modeListenBtn = document.getElementById("modeListenBtn");
-            if (modeTalkBtn) modeTalkBtn.classList.toggle("active", mode === 'talk');
-            if (modeListenBtn) modeListenBtn.classList.toggle("active", mode === 'listen');
-
-            const logSec = document.getElementById("sttLogSection");
-            if (logSec) {
-                if (mode === 'listen') {
-                    logSec.style.display = "block";
-                    if (!isListening) toggleSpeechRecognition();
-                } else {
-                    logSec.style.display = "none";
-                }
-            }
-        }
-
-        function switchNav(nav) {
-            triggerHaptic();
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            if (nav === 'cards') {
-                const navCards = document.getElementById('navCards');
-                if (navCards) navCards.classList.add('active');
-                if (isManageMode) toggleManageMode();
-            }
-        }
-
-        function toggleManageMode() {
-            triggerHaptic();
-            isManageMode = !isManageMode;
-            document.body.classList.toggle("manage-mode", isManageMode);
-            
-            const navManage = document.getElementById("navManage");
-            if (navManage) navManage.classList.toggle("active", isManageMode);
-            
-            showToast(isManageMode ? "整理モード（削除ボタン表示）" : "通常モード");
-        }
-
-        function openAddModal() {
-            triggerHaptic();
-            const addModal = document.getElementById("addModal");
-            if (addModal) addModal.classList.add("open");
-        }
-
-        function closeAddModal() {
-            triggerHaptic();
-            const addModal = document.getElementById("addModal");
-            if (addModal) addModal.classList.remove("open");
-        }
-
-        function setModalIcon(emoji) {
-            const input = document.getElementById("modalIconInput");
-            if (input) input.value = emoji;
-        }
-
-        function populateModalCategories() {
-            const select = document.getElementById("modalCategorySelect");
-            if (!select) return;
-            
-            select.innerHTML = "";
-            appData.forEach(cat => {
-                if (cat.id !== "leave") {
-                    const opt = document.createElement("option");
-                    opt.value = cat.id;
-                    opt.textContent = cat.name;
-                    select.appendChild(opt);
-                }
-            });
-        }
-
-        function saveNewCard() {
-            triggerHaptic();
-            const catSelect = document.getElementById("modalCategorySelect");
-            const iconInput = document.getElementById("modalIconInput");
-            const textInput = document.getElementById("modalTextInput");
-
-            if (!catSelect || !textInput) return;
-
-            const catId = catSelect.value;
-            const icon = (iconInput && iconInput.value) ? iconInput.value : "💬";
-            const text = textInput.value.trim();
-
-            if (!text) {
-                showToast("言葉を入力してください");
-                return;
-            }
-
-            const category = appData.find(c => c.id === catId);
-            if (category) {
-                category.cards.push({
-                    id: "custom_" + Date.now(),
-                    icon: icon,
-                    text: text
-                });
-                saveData();
-                renderCards();
-                closeAddModal();
-                textInput.value = "";
-                showToast("カードを作成しました");
-            }
-        }
-
-        function deleteCard(event, cardId) {
-            event.stopPropagation();
-            triggerHaptic();
-            const category = appData.find(c => c.id === currentCategoryId);
-            if (category) {
-                category.cards = category.cards.filter(c => c.id !== cardId);
-                saveData();
-                renderCards();
-                showToast("カードを削除しました");
-            }
-        }
-
-        // 音声認識（文字起こし）の制御
-        function initSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) return;
-
-            recognition = new SpeechRecognition();
-            recognition.lang = 'ja-JP';
-            recognition.continuous = true;
-            recognition.interimResults = true;
-
-            recognition.onstart = () => {
-                isListening = true;
-                updateListenUI(true);
-            };
-
-            recognition.onresult = (event) => {
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    }
-                }
-                if (finalTranscript.trim() !== '') {
-                    const speechText = document.getElementById("speechText");
-                    const placeholder = document.getElementById("speechPlaceholder");
-                    const displayBox = document.getElementById("speechDisplay");
-
-                    if (placeholder) placeholder.style.display = "none";
-                    if (speechText) {
-                        speechText.style.display = "block";
-                        speechText.textContent = finalTranscript;
-                    }
-                    if (displayBox) displayBox.classList.add("listening");
-
-                    addLog('other', finalTranscript);
-                }
-            };
-
-            recognition.onerror = (event) => {
-                console.log("音声認識エラー:", event.error);
-            };
-
-            recognition.onend = () => {
-                // 読み上げ中や一時停止要求があるときは自動再開せず静かに待機
-                if (isListening && !shouldResumeRecognition && !isTTSSpeaking) {
-                    try {
-                        recognition.start();
-                    } catch (e) {}
-                } else if (!isListening) {
-                    updateListenUI(false);
-                }
-            };
-        }
-
-        function toggleSpeechRecognition() {
-            triggerHaptic();
-            if (!recognition) {
-                initSpeechRecognition();
-                if (!recognition) {
-                    showToast("お使いのブラウザは音声認識に対応していません");
-                    return;
-                }
-            }
-
-            if (isListening) {
-                isListening = false;
-                shouldResumeRecognition = false;
-                try { recognition.stop(); } catch(e){}
-                updateListenUI(false);
-                showToast("文字起こしを停止しました");
-            } else {
-                isListening = true;
-                shouldResumeRecognition = false;
-                try { recognition.start(); } catch(e){}
-                updateListenUI(true);
-                showToast("文字起こしを開始しました");
-            }
-        }
-
-        function updateListenUI(active) {
-            const navListen = document.getElementById("navListen");
-            const speechDisplay = document.getElementById("speechDisplay");
-            if (navListen) navListen.classList.toggle("active", active);
-            if (speechDisplay) speechDisplay.classList.toggle("listening", active);
-        }
-
-        function addLog(sender, text) {
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            conversationLogs.unshift({ sender, text, time });
-            if (conversationLogs.length > 50) conversationLogs.pop();
-            localStorage.setItem("taptalk_logs", JSON.stringify(conversationLogs));
-            renderLogs();
-        }
-
-        function renderLogs() {
-            const logList = document.getElementById("logList");
-            if (!logList) return;
-            if (conversationLogs.length === 0) {
-                logList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size:0.85rem; padding: 15px; font-weight:700;">会話記録がここに保存されます</div>`;
-                return;
-            }
-            logList.innerHTML = conversationLogs.map(log => `
-                <div class="log-item ${log.sender}">
-                    <span style="font-size:0.75rem; opacity:0.8; margin-right:4px;">[${log.time}]</span> ${log.text}
-                </div>
-            `).join('');
-        }
-
-        function clearLogs() {
-            triggerHaptic();
-            conversationLogs = [];
-            localStorage.removeItem("taptalk_logs");
-            renderLogs();
-            showToast("ログを消去しました");
-        }
-
-        function resetDefaultData() {
-            triggerHaptic();
-            if (confirm("カードを初期状態に戻しますか？（作成したカードも消去されます）")) {
-                appData = defaultCategories;
-                saveData();
+        appData.forEach(cat => {
+            const btn = document.createElement("button");
+            btn.className = `tab-btn ${cat.id === currentCategoryId ? 'active' : ''}`;
+            btn.textContent = cat.name;
+            btn.onclick = () => {
+                triggerHaptic();
+                currentCategoryId = cat.id;
                 renderCategoryTabs();
                 renderCards();
-                showToast("リセットしました");
+            };
+            tabsContainer.appendChild(btn);
+        });
+    }
+
+    function renderCards() {
+        const grid = document.getElementById("cardsGrid");
+        const calSection = document.getElementById("calendarSection");
+        if (!grid) return;
+        grid.innerHTML = "";
+
+        if (calSection) {
+            calSection.style.display = (currentCategoryId === "leave") ? "block" : "none";
+        }
+
+        const currentCat = appData.find(c => c.id === currentCategoryId);
+        if (!currentCat || currentCat.cards.length === 0) {
+            if (currentCategoryId !== "leave") {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 30px 0; font-weight:700;">カードがありません。「作成」ボタンから追加できます</div>`;
+            }
+            return;
+        }
+
+        currentCat.cards.forEach(card => {
+            const cardEl = document.createElement("div");
+            cardEl.className = "card";
+            cardEl.innerHTML = `
+                <button class="delete-card-btn" onclick="deleteCard(event, '${card.id}')">✕</button>
+                <div class="card-icon">${card.icon}</div>
+                <div class="card-text">${card.text}</div>
+            `;
+
+            cardEl.onclick = () => {
+                triggerHaptic();
+                if (isManageMode) return;
+                
+                if (currentCategoryId === "leave") {
+                    playTapChime();
+                    showLeaveModal(card.icon, "お休み・予定連絡", card.text);
+                } else {
+                    speakText(card.text, cardEl);
+                }
+            };
+
+            grid.appendChild(cardEl);
+        });
+    }
+
+    // ノイズ対策を施した音声発話処理
+    function speakText(text, cardElement) {
+        lastSpokenText = text;
+
+        const placeholder = document.getElementById("speechPlaceholder");
+        const speechText = document.getElementById("speechText");
+        const replayBtn = document.getElementById("replayBtn");
+        const displayBox = document.getElementById("speechDisplay");
+
+        if (placeholder) placeholder.style.display = "none";
+        if (speechText) {
+            speechText.style.display = "block";
+            speechText.textContent = text;
+        }
+        if (replayBtn) replayBtn.style.display = "flex";
+        if (displayBox) displayBox.classList.add("active");
+
+        addLog('me', text);
+
+        // 音声認識が起動中なら一旦停止（マイクとスピーカーの衝突ノイズを防止）
+        if (isListening && recognition) {
+            shouldResumeRecognition = true;
+            try { recognition.stop(); } catch(e){}
+        }
+
+        playTapChime();
+
+        if (synth) {
+            isTTSSpeaking = true;
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = "ja-JP";
+            utterance.rate = 1.0;
+
+            if (cardElement) cardElement.classList.add("speaking");
+
+            const finishSpeaking = () => {
+                if (cardElement) cardElement.classList.remove("speaking");
+                if (displayBox) displayBox.classList.remove("active");
+                isTTSSpeaking = false;
+
+                // 読み上げ終了後、スピーカーの余韻が完全に消えるのを待ってから（450ms）安全にマイクを再開
+                if (shouldResumeRecognition && isListening) {
+                    setTimeout(() => {
+                        if (isListening && !isTTSSpeaking && recognition) {
+                            try { recognition.start(); } catch(e){}
+                        }
+                        shouldResumeRecognition = false;
+                    }, 450);
+                }
+            };
+
+            utterance.onend = finishSpeaking;
+            utterance.onerror = finishSpeaking;
+
+            synth.speak(utterance);
+        }
+    }
+
+    // 修正箇所：変数を leaveDateInput に統一
+    function setQuickDate(addDays) {
+        triggerHaptic();
+        const d = new Date();
+        d.setDate(d.getDate() + addDays);
+        const leaveDateInput = document.getElementById("leaveDateInput");
+        if (leaveDateInput) {
+            leaveDateInput.value = d.toISOString().split('T')[0];
+        }
+    }
+
+    function generateLeaveCard() {
+        triggerHaptic();
+        const dateInput = document.getElementById("leaveDateInput");
+        const reasonSelect = document.getElementById("leaveReasonSelect");
+
+        if (!dateInput || !dateInput.value) return;
+
+        const dateVal = dateInput.value;
+        const reason = reasonSelect ? reasonSelect.value : "お休みします";
+
+        const dateObj = new Date(dateVal);
+        const days = ['日', '月', '火', '水', '木', '金', '土'];
+        const dateStr = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${days[dateObj.getDay()]}）`;
+        const fullText = `${dateStr} ${reason}`;
+
+        const leaveCat = appData.find(c => c.id === "leave");
+        if (leaveCat) {
+            leaveCat.cards.push({
+                id: "leave_" + Date.now(),
+                icon: "📅",
+                text: fullText
+            });
+            saveData();
+            renderCards();
+        }
+
+        showLeaveModal("📅", "お休み・予定の連絡", fullText);
+    }
+
+    function showLeaveModal(icon, title, desc) {
+        const iconEl = document.getElementById("showcaseIcon");
+        const titleEl = document.getElementById("showcaseTitle");
+        const descEl = document.getElementById("showcaseDesc");
+        const modal = document.getElementById("showcaseModal");
+
+        if (iconEl) iconEl.textContent = icon;
+        if (titleEl) titleEl.textContent = title;
+        if (descEl) descEl.textContent = desc;
+        if (modal) modal.classList.add("open");
+
+        speakText(desc, null);
+    }
+
+    function closeShowcaseModal() {
+        triggerHaptic();
+        const modal = document.getElementById("showcaseModal");
+        if (modal) modal.classList.remove("open");
+    }
+
+    function replayCurrentText() {
+        triggerHaptic();
+        if (lastSpokenText) speakText(lastSpokenText, null);
+    }
+
+    function switchMode(mode) {
+        triggerHaptic();
+        const talkBtn = document.getElementById("modeTalkBtn");
+        const listenBtn = document.getElementById("modeListenBtn");
+
+        if (talkBtn) talkBtn.classList.toggle("active", mode === 'talk');
+        if (listenBtn) listenBtn.classList.toggle("active", mode === 'listen');
+
+        const logSec = document.getElementById("sttLogSection");
+        if (logSec) {
+            if (mode === 'listen') {
+                logSec.style.display = "block";
+                if (!isListening) toggleSpeechRecognition();
+            } else {
+                logSec.style.display = "none";
+            }
+        }
+    }
+
+    function switchNav(nav) {
+        triggerHaptic();
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        if (nav === 'cards') {
+            const navCards = document.getElementById('navCards');
+            if (navCards) navCards.classList.add('active');
+            if (isManageMode) toggleManageMode();
+        }
+    }
+
+    function toggleManageMode() {
+        triggerHaptic();
+        isManageMode = !isManageMode;
+        document.body.classList.toggle("manage-mode", isManageMode);
+        const navManage = document.getElementById("navManage");
+        if (navManage) navManage.classList.toggle("active", isManageMode);
+        showToast(isManageMode ? "整理モード（削除ボタン表示）" : "通常モード");
+    }
+
+    function openAddModal() {
+        triggerHaptic();
+        const modal = document.getElementById("addModal");
+        if (modal) modal.classList.add("open");
+    }
+
+    function closeAddModal() {
+        triggerHaptic();
+        const modal = document.getElementById("addModal");
+        if (modal) modal.classList.remove("open");
+    }
+
+    function setModalIcon(emoji) {
+        const input = document.getElementById("modalIconInput");
+        if (input) input.value = emoji;
+    }
+
+    function populateModalCategories() {
+        const select = document.getElementById("modalCategorySelect");
+        if (!select) return;
+        select.innerHTML = "";
+        appData.forEach(cat => {
+            if (cat.id !== "leave") {
+                const opt = document.createElement("option");
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                select.appendChild(opt);
+            }
+        });
+    }
+
+    function saveNewCard() {
+        triggerHaptic();
+        const catSelect = document.getElementById("modalCategorySelect");
+        const iconInput = document.getElementById("modalIconInput");
+        const textInput = document.getElementById("modalTextInput");
+
+        if (!catSelect || !textInput) return;
+
+        const catId = catSelect.value;
+        const icon = (iconInput && iconInput.value) ? iconInput.value : "💬";
+        const text = textInput.value.trim();
+
+        if (!text) {
+            showToast("言葉を入力してください");
+            return;
+        }
+
+        const category = appData.find(c => c.id === catId);
+        if (category) {
+            category.cards.push({
+                id: "custom_" + Date.now(),
+                icon: icon,
+                text: text
+            });
+            saveData();
+            renderCards();
+            closeAddModal();
+            textInput.value = "";
+            showToast("カードを作成しました");
+        }
+    }
+
+    function deleteCard(event, cardId) {
+        event.stopPropagation();
+        triggerHaptic();
+        const category = appData.find(c => c.id === currentCategoryId);
+        if (category) {
+            category.cards = category.cards.filter(c => c.id !== cardId);
+            saveData();
+            renderCards();
+            showToast("カードを削除しました");
+        }
+    }
+
+    // 音声認識（文字起こし）の制御
+    function initSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+
+        recognition = new SpeechRecognition();
+        recognition.lang = 'ja-JP';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+            isListening = true;
+            updateListenUI(true);
+        };
+
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                }
+            }
+            if (finalTranscript.trim() !== '') {
+                const speechText = document.getElementById("speechText");
+                const placeholder = document.getElementById("speechPlaceholder");
+                const displayBox = document.getElementById("speechDisplay");
+
+                if (placeholder) placeholder.style.display = "none";
+                if (speechText) {
+                    speechText.style.display = "block";
+                    speechText.textContent = finalTranscript;
+                }
+                if (displayBox) displayBox.classList.add("listening");
+
+                addLog('other', finalTranscript);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.log("音声認識エラー:", event.error);
+        };
+
+        recognition.onend = () => {
+            if (isListening && !shouldResumeRecognition && !isTTSSpeaking) {
+                try {
+                    recognition.start();
+                } catch (e) {}
+            } else if (!isListening) {
+                updateListenUI(false);
+            }
+        };
+    }
+
+    function toggleSpeechRecognition() {
+        triggerHaptic();
+        if (!recognition) {
+            initSpeechRecognition();
+            if (!recognition) {
+                showToast("お使いのブラウザは音声認識に対応していません");
+                return;
             }
         }
 
-        window.onload = initApp;
-    </script>
-</body>
-</html>
+        if (isListening) {
+            isListening = false;
+            shouldResumeRecognition = false;
+            try { recognition.stop(); } catch(e){}
+            updateListenUI(false);
+            showToast("文字起こしを停止しました");
+        } else {
+            isListening = true;
+            shouldResumeRecognition = false;
+            try { recognition.start(); } catch(e){}
+            updateListenUI(true);
+            showToast("文字起こしを開始しました");
+        }
+    }
+
+    function updateListenUI(active) {
+        const navListen = document.getElementById("navListen");
+        const speechDisplay = document.getElementById("speechDisplay");
+        if (navListen) navListen.classList.toggle("active", active);
+        if (speechDisplay) speechDisplay.classList.toggle("listening", active);
+    }
+
+    function addLog(sender, text) {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        conversationLogs.unshift({ sender, text, time });
+        if (conversationLogs.length > 50) conversationLogs.pop();
+        localStorage.setItem("taptalk_logs", JSON.stringify(conversationLogs));
+        renderLogs();
+    }
+
+    function renderLogs() {
+        const logList = document.getElementById("logList");
+        if (!logList) return;
+        if (conversationLogs.length === 0) {
+            logList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size:0.85rem; padding: 15px; font-weight:700;">会話記録がここに保存されます</div>`;
+            return;
+        }
+        logList.innerHTML = conversationLogs.map(log => `
+            <div class="log-item ${log.sender}">
+                <span style="font-size:0.75rem; opacity:0.8; margin-right:4px;">[${log.time}]</span> ${log.text}
+            </div>
+        `).join('');
+    }
+
+    function clearLogs() {
+        triggerHaptic();
+        conversationLogs = [];
+        localStorage.removeItem("taptalk_logs");
+        renderLogs();
+        showToast("ログを消去しました");
+    }
+
+    function resetDefaultData() {
+        triggerHaptic();
+        if (confirm("カードを初期状態に戻しますか？（作成したカードも消去されます）")) {
+            appData = defaultCategories;
+            saveData();
+            renderCategoryTabs();
+            renderCards();
+            showToast("リセットしました");
+        }
+    }
+
+    window.onload = initApp;
+</script>
