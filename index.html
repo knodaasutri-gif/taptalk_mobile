@@ -148,7 +148,7 @@
         }
         body.manage-mode .delete-card-btn { display: block; }
 
-        /* お休み・日付連絡セクション */
+        /* お休み・日付・時間連絡セクション */
         #calendarSection {
             display: none;
             background: var(--card-bg);
@@ -160,11 +160,32 @@
         .quick-dates { display: flex; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
         .quick-dates button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-weight: bold; }
         
+        .time-picker-box {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .time-picker-box label { font-size: 0.85rem; font-weight: bold; color: var(--text-muted); }
+        .time-picker-box input[type="time"] {
+            padding: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+        }
+
         .type-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
-            margin-top: 10px;
+            margin-top: 8px;
         }
         .type-btn {
             padding: 12px 8px;
@@ -173,7 +194,7 @@
             background: #eef2ff;
             color: var(--primary);
             font-weight: bold;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-align: center;
         }
@@ -239,7 +260,9 @@
 
     <!-- お休み・予定設定セクション -->
     <div id="calendarSection">
-        <h3 style="margin:0 0 8px 0; font-size:1rem;">📅 日付を選んでワンタッチ連絡</h3>
+        <h3 style="margin:0 0 8px 0; font-size:1rem;">📅 日時を選んでワンタッチ連絡</h3>
+        
+        <!-- 日付選択 -->
         <input type="date" id="leaveDateInput" style="width:100%; padding:10px; font-size:1rem; border-radius:8px; border:1px solid #cbd5e1;">
         
         <div class="quick-dates">
@@ -248,14 +271,20 @@
             <button onclick="setQuickDate(2)">明後日</button>
         </div>
 
+        <!-- 時間選択 (任意) -->
+        <div class="time-picker-box">
+            <label for="leaveTimeInput">⏰ 時間指定（必要な場合）</label>
+            <input type="time" id="leaveTimeInput" value="10:00">
+        </div>
+
         <div style="font-size:0.85rem; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">タップしてカード作成＆送信:</div>
         <div class="type-grid">
-            <button class="type-btn" onclick="generateLeaveCard('お休みします', '📅')">📅 お休み</button>
-            <button class="type-btn" onclick="generateLeaveCard('少し遅刻します', '⏱️')">⏱️ 遅刻</button>
-            <button class="type-btn" onclick="generateLeaveCard('午前中お休みします', '🌅')">🌅 午前休</button>
-            <button class="type-btn" onclick="generateLeaveCard('午後からお休みします', '🌇')">🌇 午後休</button>
-            <button class="type-btn" onclick="generateLeaveCard('早退させていただきます', '🏃‍♂️')">🏃‍♂️ 早退</button>
-            <button class="type-btn" onclick="generateLeaveCard('通院のため遅れます', '🏥')">🏥 通院遅刻</button>
+            <button class="type-btn" onclick="generateLeaveCard('お休みします', '📅', false)">📅 終日お休み</button>
+            <button class="type-btn" onclick="generateLeaveCard('頃に到着予定です', '⏱️', true)">⏱️ 時間指定遅刻</button>
+            <button class="type-btn" onclick="generateLeaveCard('に早退します', '🏃‍♂️', true)">🏃‍♂️ 時間指定早退</button>
+            <button class="type-btn" onclick="generateLeaveCard('午前中お休みします', '🌅', false)">🌅 午前休</button>
+            <button class="type-btn" onclick="generateLeaveCard('午後からお休みします', '🌇', false)">🌇 午後休</button>
+            <button class="type-btn" onclick="generateLeaveCard('通院のため遅れます', '🏥', true)">🏥 通院（時間指定）</button>
         </div>
     </div>
 
@@ -615,7 +644,7 @@
             }
         }
 
-        /* 予定・お休み連絡機能 */
+        /* 予定・お休み・時間連絡機能 */
         function setQuickDate(addDays) {
             triggerHaptic();
             const d = new Date();
@@ -626,15 +655,30 @@
             }
         }
 
-        function generateLeaveCard(typeText, icon) {
+        function formatTimeText(timeVal) {
+            if (!timeVal) return "";
+            const parts = timeVal.split(":");
+            const hours = parseInt(parts[0], 10);
+            const minutes = parseInt(parts[1], 10);
+            return minutes === 0 ? `${hours}時` : `${hours}時${minutes}分`;
+        }
+
+        function generateLeaveCard(typeText, icon, includeTime) {
             triggerHaptic();
             const dateInput = document.getElementById("leaveDateInput");
+            const timeInput = document.getElementById("leaveTimeInput");
             if (!dateInput || !dateInput.value) return;
 
             const dateObj = new Date(dateInput.value);
             const days = ['日', '月', '火', '水', '木', '金', '土'];
             const dateStr = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${days[dateObj.getDay()]}）`;
-            const fullText = `${dateStr} ${typeText}`;
+            
+            let timeStr = "";
+            if (includeTime && timeInput && timeInput.value) {
+                timeStr = formatTimeText(timeInput.value) + " ";
+            }
+
+            const fullText = `${dateStr} ${timeStr}${typeText}`;
 
             const leaveCat = appData.find(c => c.id === "leave");
             if (leaveCat) {
