@@ -102,15 +102,22 @@
 
         function showToast(msg) {
             const toast = document.getElementById("toastMsg");
-            toast.textContent = msg;
-            toast.classList.add("show");
-            setTimeout(() => toast.classList.remove("show"), 2500);
+            if (toast) {
+                toast.textContent = msg;
+                toast.classList.add("show");
+                setTimeout(() => toast.classList.remove("show"), 2500);
+            }
         }
 
         function initApp() {
             loadData();
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById("leaveDateInput").value = today;
+            
+            // 安全対策：要素が存在する場合のみ日付を自動入力（Nullエラー防止）
+            const leaveInput = document.getElementById("leaveDateInput");
+            if (leaveInput) {
+                const today = new Date().toISOString().split('T')[0];
+                leaveInput.value = today;
+            }
 
             renderCategoryTabs();
             renderCards();
@@ -143,6 +150,8 @@
 
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById("categoryTabs");
+            if (!tabsContainer) return;
+            
             tabsContainer.innerHTML = "";
 
             appData.forEach(cat => {
@@ -162,12 +171,12 @@
         function renderCards() {
             const grid = document.getElementById("cardsGrid");
             const calSection = document.getElementById("calendarSection");
+            if (!grid) return;
+
             grid.innerHTML = "";
 
-            if (currentCategoryId === "leave") {
-                calSection.style.display = "block";
-            } else {
-                calSection.style.display = "none";
+            if (calSection) {
+                calSection.style.display = (currentCategoryId === "leave") ? "block" : "none";
             }
 
             const currentCat = appData.find(c => c.id === currentCategoryId);
@@ -212,11 +221,13 @@
             const replayBtn = document.getElementById("replayBtn");
             const displayBox = document.getElementById("speechDisplay");
 
-            placeholder.style.display = "none";
-            speechText.style.display = "block";
-            speechText.textContent = text;
-            replayBtn.style.display = "flex";
-            displayBox.classList.add("active");
+            if (placeholder) placeholder.style.display = "none";
+            if (speechText) {
+                speechText.style.display = "block";
+                speechText.textContent = text;
+            }
+            if (replayBtn) replayBtn.style.display = "flex";
+            if (displayBox) displayBox.classList.add("active");
 
             addLog('me', text);
 
@@ -239,7 +250,7 @@
 
                 const finishSpeaking = () => {
                     if (cardElement) cardElement.classList.remove("speaking");
-                    displayBox.classList.remove("active");
+                    if (displayBox) displayBox.classList.remove("active");
                     isTTSSpeaking = false;
 
                     // 読み上げ終了後、スピーカーの余韻が完全に消えるのを待ってから（450ms）安全にマイクを再開
@@ -264,13 +275,19 @@
             triggerHaptic();
             const d = new Date();
             d.setDate(d.getDate() + addDays);
-            document.getElementById("leaveDateInput").value = d.toISOString().split('T')[0];
+            const input = document.getElementById("leaveDateInput");
+            if (input) input.value = d.toISOString().split('T')[0];
         }
 
         function generateLeaveCard() {
             triggerHaptic();
-            const dateVal = document.getElementById("leaveDateInput").value;
-            const reason = document.getElementById("leaveReasonSelect").value;
+            const dateInput = document.getElementById("leaveDateInput");
+            const reasonInput = document.getElementById("leaveReasonSelect");
+            
+            if (!dateInput || !reasonInput) return;
+            
+            const dateVal = dateInput.value;
+            const reason = reasonInput.value;
 
             if (!dateVal) return;
 
@@ -294,16 +311,23 @@
         }
 
         function showLeaveModal(icon, title, desc) {
-            document.getElementById("showcaseIcon").textContent = icon;
-            document.getElementById("showcaseTitle").textContent = title;
-            document.getElementById("showcaseDesc").textContent = desc;
-            document.getElementById("showcaseModal").classList.add("open");
+            const showcaseIcon = document.getElementById("showcaseIcon");
+            const showcaseTitle = document.getElementById("showcaseTitle");
+            const showcaseDesc = document.getElementById("showcaseDesc");
+            const showcaseModal = document.getElementById("showcaseModal");
+
+            if (showcaseIcon) showcaseIcon.textContent = icon;
+            if (showcaseTitle) showcaseTitle.textContent = title;
+            if (showcaseDesc) showcaseDesc.textContent = desc;
+            if (showcaseModal) showcaseModal.classList.add("open");
+
             speakText(desc, null);
         }
 
         function closeShowcaseModal() {
             triggerHaptic();
-            document.getElementById("showcaseModal").classList.remove("open");
+            const showcaseModal = document.getElementById("showcaseModal");
+            if (showcaseModal) showcaseModal.classList.remove("open");
         }
 
         function replayCurrentText() {
@@ -313,15 +337,19 @@
 
         function switchMode(mode) {
             triggerHaptic();
-            document.getElementById("modeTalkBtn").classList.toggle("active", mode === 'talk');
-            document.getElementById("modeListenBtn").classList.toggle("active", mode === 'listen');
+            const modeTalkBtn = document.getElementById("modeTalkBtn");
+            const modeListenBtn = document.getElementById("modeListenBtn");
+            if (modeTalkBtn) modeTalkBtn.classList.toggle("active", mode === 'talk');
+            if (modeListenBtn) modeListenBtn.classList.toggle("active", mode === 'listen');
 
             const logSec = document.getElementById("sttLogSection");
-            if (mode === 'listen') {
-                logSec.style.display = "block";
-                if (!isListening) toggleSpeechRecognition();
-            } else {
-                logSec.style.display = "none";
+            if (logSec) {
+                if (mode === 'listen') {
+                    logSec.style.display = "block";
+                    if (!isListening) toggleSpeechRecognition();
+                } else {
+                    logSec.style.display = "none";
+                }
             }
         }
 
@@ -329,7 +357,8 @@
             triggerHaptic();
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             if (nav === 'cards') {
-                document.getElementById('navCards').classList.add('active');
+                const navCards = document.getElementById('navCards');
+                if (navCards) navCards.classList.add('active');
                 if (isManageMode) toggleManageMode();
             }
         }
@@ -338,26 +367,34 @@
             triggerHaptic();
             isManageMode = !isManageMode;
             document.body.classList.toggle("manage-mode", isManageMode);
-            document.getElementById("navManage").classList.toggle("active", isManageMode);
+            
+            const navManage = document.getElementById("navManage");
+            if (navManage) navManage.classList.toggle("active", isManageMode);
+            
             showToast(isManageMode ? "整理モード（削除ボタン表示）" : "通常モード");
         }
 
         function openAddModal() {
             triggerHaptic();
-            document.getElementById("addModal").classList.add("open");
+            const addModal = document.getElementById("addModal");
+            if (addModal) addModal.classList.add("open");
         }
 
         function closeAddModal() {
             triggerHaptic();
-            document.getElementById("addModal").classList.remove("open");
+            const addModal = document.getElementById("addModal");
+            if (addModal) addModal.classList.remove("open");
         }
 
         function setModalIcon(emoji) {
-            document.getElementById("modalIconInput").value = emoji;
+            const input = document.getElementById("modalIconInput");
+            if (input) input.value = emoji;
         }
 
         function populateModalCategories() {
             const select = document.getElementById("modalCategorySelect");
+            if (!select) return;
+            
             select.innerHTML = "";
             appData.forEach(cat => {
                 if (cat.id !== "leave") {
@@ -371,9 +408,15 @@
 
         function saveNewCard() {
             triggerHaptic();
-            const catId = document.getElementById("modalCategorySelect").value;
-            const icon = document.getElementById("modalIconInput").value || "💬";
-            const text = document.getElementById("modalTextInput").value.trim();
+            const catSelect = document.getElementById("modalCategorySelect");
+            const iconInput = document.getElementById("modalIconInput");
+            const textInput = document.getElementById("modalTextInput");
+
+            if (!catSelect || !textInput) return;
+
+            const catId = catSelect.value;
+            const icon = (iconInput && iconInput.value) ? iconInput.value : "💬";
+            const text = textInput.value.trim();
 
             if (!text) {
                 showToast("言葉を入力してください");
@@ -390,7 +433,7 @@
                 saveData();
                 renderCards();
                 closeAddModal();
-                document.getElementById("modalTextInput").value = "";
+                textInput.value = "";
                 showToast("カードを作成しました");
             }
         }
@@ -434,10 +477,12 @@
                     const placeholder = document.getElementById("speechPlaceholder");
                     const displayBox = document.getElementById("speechDisplay");
 
-                    placeholder.style.display = "none";
-                    speechText.style.display = "block";
-                    speechText.textContent = finalTranscript;
-                    displayBox.classList.add("listening");
+                    if (placeholder) placeholder.style.display = "none";
+                    if (speechText) {
+                        speechText.style.display = "block";
+                        speechText.textContent = finalTranscript;
+                    }
+                    if (displayBox) displayBox.classList.add("listening");
 
                     addLog('other', finalTranscript);
                 }
@@ -487,13 +532,8 @@
         function updateListenUI(active) {
             const navListen = document.getElementById("navListen");
             const speechDisplay = document.getElementById("speechDisplay");
-            if (active) {
-                navListen.classList.add("active");
-                speechDisplay.classList.add("listening");
-            } else {
-                navListen.classList.remove("active");
-                speechDisplay.classList.remove("listening");
-            }
+            if (navListen) navListen.classList.toggle("active", active);
+            if (speechDisplay) speechDisplay.classList.toggle("listening", active);
         }
 
         function addLog(sender, text) {
